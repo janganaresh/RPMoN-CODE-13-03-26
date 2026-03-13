@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Concrete Process Images</title>
+
+    <!-- ✅ jsPDF CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .top-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 22px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #1e4fd6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #eef2ff;
+            font-size: 14px;
+        }
+
+        th, td {
+            border-bottom: 1px solid #ddd;
+            padding: 12px;
+            vertical-align: top;
+        }
+
+        th:first-child,
+        td:first-child {
+            width: 220px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .img-row img {
+            width: 85px;
+            height: 65px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .img-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.img-row img {
+    width: 105px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.img-row img:hover {
+    transform: scale(1.4);
+    z-index: 10;
+}
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Concrete Process – Images</h2>
+
+    <div class="top-actions">
+        <form action="/get_images">
+            <button type="submit">Get Images</button>
+        </form>
+
+        <!-- ✅ FIXED BUTTON -->
+        <button onclick="saveConcretePDF()">Download PDF</button>
+    </div>
+
+    <table id="reportTable">
+        <thead>
+            <tr>
+                <th>Table ID</th>
+                <th>Pictures</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+            <tr>
+                <td>{{ item.folder }}</td>
+                <td>
+    <div class="img-row">
+        {% for img in item.images %}
+            <img src="/concrete_image/{{ item.folder }}/{{ img }}">
+        {% endfor %}
+    </div>
+</td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+    function drawLightHeader(doc) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Light background (soft gray / lite blue)
+    doc.setFillColor(153, 204, 255);   // very light color
+    doc.rect(0, 0, pageWidth, 16, "F");
+
+    // Header text
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text(
+        "Concrete Process Documentation",
+        pageWidth / 2,
+        11,
+        { align: "center" }
+    );
+
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+}
+async function saveConcretePDF() {
+
+    const { jsPDF } = window.jspdf;
+
+    const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4"
+    });
+
+    const table = document.getElementById("reportTable");
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    drawLightHeader(doc);
+let y = 24;
+
+    let setsOnPage = 0;
+
+    for (let i = 1; i < table.rows.length; i++) {
+
+        if (setsOnPage === 3) {
+    doc.addPage();
+    drawLightHeader(doc);
+    y = 24;
+    setsOnPage = 0;
+}
+
+        const row = table.rows[i];
+        const tableId = row.cells[0].innerText.trim();
+        const imgTags = row.cells[1].querySelectorAll("img");
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text(`Table ID : ${tableId}`, 15, y);
+        y += 8;
+
+        let x = 15;
+        const imgW = 32;
+        const imgH = 40;
+
+        for (let img of imgTags) {
+            const dataURL = await loadImageAsDataURL(img.src);
+
+            if (x + imgW > pageWidth - 15) {
+                x = 15;
+                y += imgH + 10;
+            }
+
+            doc.addImage(dataURL, "JPEG", x, y, imgW, imgH);
+            x += imgW + 7;
+        }
+
+        y += imgH + 10;
+        setsOnPage++;
+    }
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+
+doc.setFont("helvetica", "italic");
+doc.setFontSize(10);
+doc.setTextColor(120, 120, 120);
+
+doc.text(
+    "INDISOLAR - Software Generated Report",
+    pageWidth / 2,
+    pageHeight - 15,
+    { align: "center" }
+);
+    doc.save("Concrete_Documentation.pdf");
+}
+
+function loadImageAsDataURL(url) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext("2d").drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/jpeg", 0.1));
+        };
+        img.src = url;
+    });
+}
+</script>
+
+</body>
+</html>

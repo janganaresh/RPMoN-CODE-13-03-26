@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Area Info</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .container {
+      background-color: #fff;
+      padding: 30px 40px;
+      margin: 30px 10px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: #333;
+    }
+
+    .area-table-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    select, input[type="date"] {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px 20px;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .result-box {
+      margin-top: 25px;
+      border-radius: 12px;
+      padding: 25px;
+      background: #f9fbff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .results-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .result-card {
+      flex: 1 1 250px;
+      background: #d8d8da;
+      border: 1px solid #d6e4ff;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .result-card h4 {
+      margin-bottom: 10px;
+      color: #0056b3;
+      font-size: 17px;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Area Information</h2>
+
+    <div class="area-table-row">
+      <div class="field-group">
+        <label for="area-select">Select Area:</label>
+        <select id="area-select">
+          <option value="Area1">Area1</option>
+          <option value="Area2">Area2</option>
+          <option value="Area3">Area3</option>
+          <option value="Area4">Area4</option>
+          <option value="Area5">Area5</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label for="table-select">Select Table:</label>
+        <select id="table-select">
+          <option value="assessment">Assessment</option>
+          <option value="remedy">Remedy</option>
+        </select>
+      </div>
+      <div class="field-group">
+    <label for="user_id">Select User (optional):</label>
+    <select id="user_id" name="user_id">
+        <option value="">All Users</option>
+    </select>
+</div>
+
+    </div>
+    
+    <div class="area-table-row">
+      <div class="field-group">
+        <label for="start-date">Start Date (optional):</label>
+        <input type="date" id="start-date">
+      </div>
+
+      <div class="field-group">
+        <label for="end-date">End Date (optional):</label>
+        <input type="date" id="end-date">
+      </div>
+    </div>
+
+    <button id="get-info-btn">Get Info</button>
+
+    <div id="info-results" class="result-box" style="display: none;">
+      <h3>Results for <span id="result-area"></span> (<span id="result-table"></span>)</h3>
+
+      <div class="results-grid">
+        <div class="result-card">
+          <h4>Status</h4>
+          <p>In Progress:- <span id="in-progress"></span></p>
+          <p>Completed:- <span id="completed"></span></p>
+          <p>PM Approved:- <span id="pm-approved"></span></p>
+          <p>OE Approved:- <span id="oe-approved"></span></p>
+        </div>
+
+        <div class="result-card">
+          <h4>Cases</h4>
+          <p>Case 1:-<span id="case1"></span></p>
+          <p>Case 2:-<span id="case2"></span></p>
+          <p>Case 3:- <span id="case3"></span></p>
+          <p>Case 4:- <span id="case4"></span></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+ <script>
+  document.getElementById("get-info-btn").addEventListener("click", () => {
+    const area = document.getElementById("area-select").value;
+    const table = document.getElementById("table-select").value;
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+
+    // Total piles per area
+    const areaTotals = {
+      Area1: 3932,
+      Area2: 5404,
+      Area3: 1732,
+      Area4: 7912,
+      Area5: 2932
+    };
+
+   const user_id = document.getElementById("user_id").value;  // ⬅️ NEW
+
+fetch("/get-area-info", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ 
+        area, 
+        table, 
+        start_date: startDate, 
+        end_date: endDate,
+        user_id: user_id    // ⬅️ SEND USER ID
+    })
+})
+.then(res => res.json())
+.then(data => {
+    if (data.success) {
+        document.getElementById("info-results").style.display = "block";
+        document.getElementById("result-area").textContent = area;
+        document.getElementById("result-table").textContent = table;
+
+        // Display values
+        document.getElementById("in-progress").textContent = data.in_progress;
+        document.getElementById("completed").textContent = data.completed;
+        document.getElementById("pm-approved").textContent = data.pm_approved;
+        document.getElementById("oe-approved").textContent = data.oe_approved;
+
+        document.getElementById("case1").textContent = data.case1;
+        document.getElementById("case2").textContent = data.case2;
+        document.getElementById("case3").textContent = data.case3;
+        document.getElementById("case4").textContent = data.case4;
+
+        const total = areaTotals[area] || 0;
+        const inProg = parseInt(data.in_progress) || 0;
+        const completed = parseInt(data.completed) || 0;
+        const pm = parseInt(data.pm_approved) || 0;
+        const oe = parseInt(data.oe_approved) || 0;
+        const remaining = total - (inProg + completed + pm + oe);
+
+        const statusDiv = document.querySelector(".result-card");
+
+        let totalEl = document.getElementById("total-piles");
+        if (!totalEl) {
+            const totalP = document.createElement("p");
+            totalP.innerHTML = `Total Piles:- <span id="total-piles"></span>`;
+            statusDiv.prepend(totalP);
+            totalEl = document.getElementById("total-piles");
+        }
+
+        let remainingEl = document.getElementById("remaining-piles");
+        if (!remainingEl) {
+            const remainP = document.createElement("p");
+            remainP.innerHTML = `Remaining:- <span id="remaining-piles"></span>`;
+            statusDiv.appendChild(remainP);
+            remainingEl = document.getElementById("remaining-piles");
+        }
+
+        let percentEl = document.getElementById("percent-completed");
+        if (!percentEl) {
+            const percentP = document.createElement("p");
+            percentP.innerHTML = `Percentage Completed:- <span id="percent-completed"></span>%`;
+            statusDiv.appendChild(percentP);
+            percentEl = document.getElementById("percent-completed");
+        }
+
+        totalEl.textContent = total;
+        remainingEl.textContent = remaining >= 0 ? remaining : 0;
+
+        const percent = total > 0 ? (((total - remaining) / total) * 100).toFixed(2) : 0;
+        percentEl.textContent = percent;
+
+    } else {
+        alert(data.message);
+    }
+})
+.catch(err => alert("Error: " + err));
+});
+  fetch("/get_user_ids")
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const userSelect = document.getElementById("user_id");
+
+            data.users.forEach(user => {
+                let option = new Option(user.username, user.id);
+                userSelect.add(option);
+            });
+        } else {
+            alert("Failed to load users: " + data.message);
+        }
+    })
+    .catch(error => console.error("Error fetching users:", error));
+</script>
+
+</body>
+</html>

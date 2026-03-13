@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="Python FastCGI" path="*" verb="*" modules="FastCgiModule" scriptProcessor="C:\Python310\python.exe|C:\Python310\Scripts\wfastcgi.exe" resourceType="Unspecified" requireAccess="Script" />
+    </handlers>
+    <fastCgi>
+      <application fullPath="C:\Python310\python.exe" arguments="C:\Python310\Scripts\wfastcgi.exe" instanceMaxRequests="10000" />
+    </fastCgi>
+  </system.webServer>
+</configuration>
+
+
+to run the application fast..... python -m waitress --listen=0.0.0.0:5000 app:app
+to get the public ip address.... https://whatismyipaddress.com/
+
+
+
+transfer the data from mobile termux to PC ####################
+
+
+
+Method 2: Sync Data via Python Script
+If you want an automated way, write a Python script to transfer data using Flask API or SFTP.
+
+1. Create a Backup Script on Mobile
+Write a Python script backup.py to export and send data to your PC:
+
+python
+Copy
+Edit
+import os
+os.system("mysqldump -u root -p'your_password' your_database_name > db_backup.sql")
+os.system("scp db_backup.sql user@your_pc_ip:/path/to/save/")
+Run it daily:
+
+bash
+Copy
+Edit
+python backup.py
+2. Restore on Your PC
+On your PC, create a script restore.py:
+
+python
+Copy
+Edit
+import os
+os.system("mysql -u root -p'your_password' your_database_name < /path/to/db_backup.sql")
+Run it after transferring:
+
+bash
+Copy
+Edit
+python restore.py

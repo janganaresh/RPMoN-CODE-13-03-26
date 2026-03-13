@@ -1,0 +1,221 @@
+1.to download backup file in local db: mysqldump -u root -p remedydb assessment > assessment_backup_13-11-2025.sql
+2.to send backup file to linux server: scp assessment_backup_05-08-2025.sql root@89.116.122.75:/var/www/remedyapp/
+3.to dump the data in linux database:  mysql -u root -p remedydb < /var/www/remedyapp/assessment_backup_05-08-2025.sql
+
+
+1. to download backup file in local db: mysqldump -u root -p remedydb remedy > remedy_backup_05-08-2025.sql
+2. to send backup file to linux server: scp remedy_backup_05-08-2025.sql root@89.116.122.75:/var/www/remedyapp/
+3. to dump the data in linux database:  mysql -u root -p remedydb < /var/www/remedyapp/remedy_backup_05-08-2025.sql
+
+AssessmentPictures to server cmd
+1. scp -r "C:\Users\LENOVO\Desktop\picstoserver\*" root@89.116.122.75:/var/www/remedyapp/AssessmentPictures/
+
+mysql -u root -p remedydb < /var/www/remedyapp/comments_backup_22-06-2025.sql
+
+
+
+
+Assessment exists + Remedy exists	✅ YES
+Remedy exists, Assessment missing	✅ YES
+Assessment exists, Remedy missing	✅ YES
+
+
+
+@app.route('/generate_remedy_report', methods=['GET'])
+def generate_remedy_report():
+    remedy_text = request.args.get('remedy_text')
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+    completed_date = request.args.get('completed_date')
+    remedy_status = request.args.get('remedy_status')
+    remedy_case = request.args.get('remedy_case')
+    area_id = request.args.get('area')
+    picture_location = request.args.get('picture_location')
+
+    if (from_date and to_date and completed_date) or ((not from_date or not to_date) and not completed_date):
+        return jsonify({
+            "error": "Please either provide From + To Dates or a Completed Date — not both."
+        }), 400
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    try:
+        base_filters = ""
+        params = []
+
+        # Date filters (apply carefully)
+        if completed_date:
+            base_filters += " AND DATE(COALESCE(r.`Date Completed`, a.`Assessment Date`)) = %s"
+            params.append(completed_date)
+        else:
+            base_filters += " AND DATE(COALESCE(r.`Task Date`, a.`Assessment Date`)) BETWEEN %s AND %s"
+            params.extend([from_date, to_date])
+
+        if area_id and area_id.lower() != "all":
+            base_filters += " AND COALESCE(r.`Area ID`, a.`Area ID`) = %s"
+            params.append(area_id)
+
+        if remedy_text and remedy_text.lower() != "all":
+            base_filters += " AND r.`Remedy Text` = %s"
+            params.append(remedy_text)
+
+        if remedy_status and remedy_status.lower() != "all status":
+            base_filters += " AND a.`Assessment Status` = %s"
+            params.append(remedy_status)
+
+        if remedy_case and remedy_case.lower() != "all cases":
+            base_filters += " AND a.`Assessment Case` = %s"
+            params.append(remedy_case)
+
+        picture_filter = ""
+        if picture_location == "not_null":
+            picture_filter = " AND r.`Picture Location` IS NOT NULL AND r.`Picture Location` != ''"
+        elif picture_location == "null":
+            picture_filter = " AND (r.`Picture Location` IS NULL OR r.`Picture Location` = '')"
+
+        query = f"""
+            -- Remedy LEFT JOIN Assessment
+            SELECT 
+                COALESCE(r.`Remedy ID`, 'NA') AS `Remedy ID`,
+                COALESCE(r.`Area ID`, a.`Area ID`) AS `Area ID`,
+                COALESCE(a.`Assessment Case`, 'Not Assessed') AS `Assessed Case`,
+                COALESCE(a.`Assessment Status`, 'Not Assessed') AS `Remedy Status`,
+                COALESCE(r.`Pile No`, a.`Pile No`) AS `Pile No`,
+                COALESCE(r.`Table ID`, a.`Table ID`) AS `Table ID`,
+                DATE_FORMAT(COALESCE(r.`Task Date`, a.`Assessment Date`), '%d %b %Y') AS `Task Date`,
+                r.`Remedy Text`
+            FROM remedy r
+            LEFT JOIN assessment a
+                ON r.`Area ID` = a.`Area ID`
+               AND r.`Table ID` = a.`Table ID`
+               AND r.`Pile No` = a.`Pile No`
+            WHERE 1=1
+            {base_filters}
+            {picture_filter}
+
+            UNION
+
+            -- Assessment LEFT JOIN Remedy (to catch assessment-only rows)
+            SELECT 
+                COALESCE(r.`Remedy ID`, 'NA') AS `Remedy ID`,
+                COALESCE(r.`Area ID`, a.`Area ID`) AS `Area ID`,
+                COALESCE(a.`Assessment Case`, 'Not Assessed') AS `Assessed Case`,
+                COALESCE(a.`Assessment Status`, 'Not Assessed') AS `Remedy Status`,
+                COALESCE(r.`Pile No`, a.`Pile No`) AS `Pile No`,
+                COALESCE(r.`Table ID`, a.`Table ID`) AS `Table ID`,
+                DATE_FORMAT(COALESCE(r.`Task Date`, a.`Assessment Date`), '%d %b %Y') AS `Task Date`,
+                r.`Remedy Text`
+            FROM assessment a
+            LEFT JOIN remedy r
+                ON r.`Area ID` = a.`Area ID`
+               AND r.`Table ID` = a.`Table ID`
+               AND r.`Pile No` = a.`Pile No`
+            WHERE r.`Remedy ID` IS NULL
+            {base_filters}
+        ORDER BY `Area ID`, `Table ID`, `Pile No`
+        """
+
+        cursor.execute(query, params * 2)  # params used in both SELECTs
+        return jsonify(cursor.fetchall())
+
+    finally:
+        cursor.close()
+        connection.close()
+
+
+
+
+
+ncfrename''''
+
+import os
+import pandas as pd
+from PIL import Image
+
+# === CONFIG ===
+excel_path = r"C:\Users\LENOVO\Desktop\nocoderenames2.xlsx"
+base_path = r"C:\Users\LENOVO\Desktop\sumith"
+
+# === LOAD EXCEL ===
+df = pd.read_excel(excel_path)
+df.columns = df.columns.str.strip()
+
+# === LOOP THROUGH FOLDERS ===
+for folder in os.listdir(base_path):
+    folder_path = os.path.join(base_path, folder)
+    if os.path.isdir(folder_path):
+        parts = folder.split("_")
+        if len(parts) >= 4:
+            table_id = parts[1] + parts[2]   # C63S24
+            pile_no = parts[3].replace("P", "")  # 1
+
+            # Find matching Excel row
+            match = df[
+                (df["Table ID"].astype(str).str.upper() == table_id.upper()) &
+                (df["Pile No"].astype(str) == pile_no)
+            ]
+
+            if not match.empty:
+                assessment_id = match.iloc[0]["Assessment ID"]
+
+                # === Rename and compress images ===
+                images = [f for f in os.listdir(folder_path)
+                          if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+
+                for i, img in enumerate(sorted(images), start=1):
+                    ext = os.path.splitext(img)[1]
+                    new_img_name = f"{assessment_id}_{table_id}_Pile{pile_no}_Side{i}.jpg"  # Save all as JPG
+                    old_img_path = os.path.join(folder_path, img)
+                    new_img_path = os.path.join(folder_path, new_img_name)
+
+                    # Open and compress image
+                    with Image.open(old_img_path) as im:
+                        im = im.convert("RGB")  # ensure no alpha channel
+                        im.save(new_img_path, "JPEG", quality=40, optimize=True)  
+                        # quality=40 → ~150KB (tune between 30–60 if needed)
+
+                    os.remove(old_img_path)  # delete old large image
+                    print(f"Compressed + Renamed: {img} → {new_img_name}")
+
+                # === Rename folder ===
+                new_folder_path = os.path.join(base_path, assessment_id)
+                os.rename(folder_path, new_folder_path)
+                print(f"Folder renamed: {folder} → {assessment_id}\n")
+
+            else:
+                print(f"No match found for folder: {folder}")
+        else:
+            print(f"Skipping invalid folder: {folder}")
+
+print("✅ Done renaming + compressing images!")
+
+
+sumith 90d
+
+import os
+from PIL import Image
+
+# === CONFIG ===
+base_path = r"C:\Users\LENOVO\Desktop\sumith"  # already renamed Assessment ID folders
+
+# === LOOP THROUGH FOLDERS ===
+for folder in os.listdir(base_path):
+    folder_path = os.path.join(base_path, folder)
+    if os.path.isdir(folder_path):
+        images = [f for f in os.listdir(folder_path)
+                  if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+
+        for img in images:
+            img_path = os.path.join(folder_path, img)
+
+            try:
+                with Image.open(img_path) as im:
+                    im = im.convert("RGB")
+                    im = im.rotate(-90, expand=True)  # rotate 90° clockwise
+                    im.save(img_path, "JPEG", quality=40, optimize=True)  # overwrite same file
+                    print(f"✅ Rotated & saved: {folder}\\{img}")
+            except Exception as e:
+                print(f"❌ Error with {img_path}: {e}")
+
+print("🎉 All images rotated 90° clockwise and saved successfully!")

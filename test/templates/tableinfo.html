@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Assessment Update</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgb(229, 234, 162);
+            padding: 20px;
+            border-radius: 6px;
+            max-width: 900px;
+            margin: auto;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+        }
+
+        .table-input {
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        input {
+            padding: 6px;
+            width: 90px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        button {
+            padding: 9px 14px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            background: #007bff;
+            color: white;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: #f0f0f0;
+        }
+
+        select {
+            padding: 5px;
+            width: 150px;
+        }
+
+        .success {
+            color: green;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>Assessment Case & Status Update</h2>
+
+    <div class="table-input">
+        <strong>Table ID:</strong>
+        C <input type="number" id="c_val" placeholder="Enter C">
+        S <input type="number" id="s_val" placeholder="Enter S">
+        <button onclick="getAssessment()">Get Info</button>
+    </div>
+
+    <table id="assessmentTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>Pile No</th>
+                <th>Assessment Case</th>
+                <th>Assessment Status</th>
+                <th>Update</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <p id="msg" class="success"></p>
+</div>
+
+<script>
+function getAssessment() {
+    const c = document.getElementById("c_val").value;
+    const s = document.getElementById("s_val").value;
+
+    if (!c || !s) {
+        alert("Enter both C and S values");
+        return;
+    }
+
+    const tableId = `C${c}S${s}`;
+
+    fetch(`/get_assessment_data?table_id=${tableId}`)
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.querySelector("#assessmentTable tbody");
+            tbody.innerHTML = "";
+
+            if (data.length === 0) {
+                alert("No records found");
+                return;
+            }
+
+            data.forEach(row => {
+                tbody.innerHTML += `
+                <tr>
+                    <td>${row.pile_no}</td>
+                    <td>
+                        <select class="assessment_case">
+                            <option ${row.assessment_case=="Not Assessed"?"selected":""}>Not Assessed</option>
+                            <option ${row.assessment_case=="Case1"?"selected":""}>Case1</option>
+                            <option ${row.assessment_case=="Case2"?"selected":""}>Case2</option>
+                            <option ${row.assessment_case=="Case3"?"selected":""}>Case3</option>
+                            <option ${row.assessment_case=="Case4"?"selected":""}>Case4</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="assessment_status">
+                            <option ${row.assessment_status=="In Progress"?"selected":""}>In Progress</option>
+                            <option ${row.assessment_status=="Completed"?"selected":""}>Completed</option>
+                            <option ${row.assessment_status=="PM Approved"?"selected":""}>PM Approved</option>
+                            <option ${row.assessment_status=="OE Approved"?"selected":""}>OE Approved</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button onclick="updateAssessment('${tableId}', ${row.pile_no}, this)">
+                            Update
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            document.getElementById("assessmentTable").style.display = "table";
+        });
+}
+
+function updateAssessment(tableId, pileNo, btn) {
+    const row = btn.closest("tr");
+    const assessment_case = row.querySelector(".assessment_case").value;
+    const assessment_status = row.querySelector(".assessment_status").value;
+
+    fetch("/update_assessment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            table_id: tableId,
+            pile_no: pileNo,
+            assessment_case: assessment_case,
+            assessment_status: assessment_status
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("msg").innerText = data.message;
+    });
+}
+</script>
+
+</body>
+</html>

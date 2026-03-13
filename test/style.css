@@ -1,0 +1,163 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+
+
+CMNTT
+
+
+
+<button type="button" class="comment-icon" 
+                onclick="toggleCommentBox('${commentId}', '${userId}', '${areaId}', '${tableId}', '${pileNo}', '${caseType}', '${row["Assessment Status"]}')"
+                title="Click to add a comment">💬</button>
+                <div id="commentBox_${commentId}" class="comment-box" style="display:none; margin-top:5px;">
+                    <textarea id="commentText_${commentId}" placeholder="Enter comment..." style="width:100px; height:60px;"></textarea>
+                   <button type="button" onclick="submitComment('${commentId}', '${userId}', '${areaId}', '${tableId}', '${pileNo}', '${caseType}', '${row["Assessment Status"]}')">Submit</button>
+                </div>
+
+
+
+
+
+
+
+
+/* Body Style */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 20px;
+}
+
+/* Heading */
+h1 {
+    text-align: center;
+    color: #4CAF50;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+}
+
+/* Form */
+form {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+    padding: 20px;
+}
+
+/* Form Group */
+.form-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 5px;
+    flex: 1;
+    min-width: 150px;
+}
+
+input[type="text"], textarea, select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    color: #555;
+    flex: 2;
+}
+
+textarea {
+    height: 60px;
+    resize: none;
+}
+
+input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: #4CAF50;
+    outline: none;
+    
+}
+
+/* Required Fields */
+.required {
+    color: red;
+    font-weight: bold;
+}
+
+.required-text {
+    color: red;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+/* Country and Phone Row */
+.row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.country select {
+    width: 100%;
+}
+
+.phone input {
+    width: 100%;
+}
+
+/* Submit Button */
+input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+input[type="submit"]:hover {
+    background-color: #45a049;
+}
+
+/* Responsive Behavior */
+@media (max-width: 768px) {
+    .form-group {
+        flex-direction: column;
+    }
+
+    label {
+        margin-bottom: 5px;
+    }
+
+    input[type="text"], textarea, select {
+        width: 100%;
+    }
+
+    .row {
+        flex-direction: column;
+    }
+}

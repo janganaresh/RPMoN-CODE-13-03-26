@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Concrete Process Images</title>
+
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .top-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 22px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #1e4fd6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #eef2ff;
+            font-size: 14px;
+        }
+
+        th, td {
+            border-bottom: 1px solid #ddd;
+            padding: 12px;
+            vertical-align: top;
+        }
+
+        th:first-child,
+        td:first-child {
+            width: 180px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .img-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .img-row img {
+            width: 105px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .img-row img:hover {
+            transform: scale(1.4);
+            z-index: 10;
+        }
+
+        .date-input-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .date-input-section input {
+            padding: 6px;
+            margin: 5px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>Concrete Process – Images</h2>
+
+    <div class="top-actions">
+        <form action="/get_images">
+            <button type="submit">Get Images</button>
+        </form>
+
+        <button onclick="saveConcretePDF()">Download PDF</button>
+    </div>
+
+    <!-- DATE DISTRIBUTION SECTION -->
+    <div class="date-input-section">
+        <label>From Date:</label>
+        <input type="date" id="fromDate">
+
+        <label>To Date:</label>
+        <input type="date" id="toDate">
+
+        <br>
+
+        <label>Counts (comma separated):</label>
+        <input type="text" id="dayCounts" placeholder="10,15,9,8,12,6,10" style="width:300px;">
+
+        <button onclick="applyDateDistribution()">Apply Dates</button>
+    </div>
+
+    <table id="reportTable">
+        <thead>
+            <tr>
+                <th>Pile ID</th>
+                <th>Date</th>
+                <th>Pictures</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data %}
+            <tr>
+                <td>{{ item.folder }}</td>
+                <td class="date-cell"></td>
+                <td>
+                    <div class="img-row">
+                        {% for img in item.images %}
+                            <img src="/concrete_image/{{ item.folder }}/{{ img }}">
+                        {% endfor %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+
+function applyDateDistribution() {
+
+    const fromDateValue = document.getElementById("fromDate").value;
+    const countsInput = document.getElementById("dayCounts").value;
+
+    if (!fromDateValue || !countsInput) {
+        alert("Please select date and enter counts.");
+        return;
+    }
+
+    const fromDate = new Date(fromDateValue);
+
+    const counts = countsInput
+        .split(",")
+        .map(num => parseInt(num.trim()));
+
+    const rows = document.querySelectorAll("#reportTable tbody tr");
+
+    let rowIndex = 0;
+    let currentDate = new Date(fromDate);
+
+    for (let count of counts) {
+
+        // Skip if 0
+        if (!count || count <= 0) {
+            currentDate.setDate(currentDate.getDate() + 1);
+            continue;
+        }
+
+        for (let i = 0; i < count && rowIndex < rows.length; i++) {
+
+            const dateCell = rows[rowIndex].querySelector(".date-cell");
+            dateCell.innerText = currentDate.toISOString().split("T")[0];
+
+            rowIndex++;
+        }
+
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+   
+}
+
+function drawLightHeader(doc) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(153, 204, 255);
+    doc.rect(0, 0, pageWidth, 16, "F");
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text("Concrete Documentation", pageWidth / 2, 11, { align: "center" });
+
+    doc.setTextColor(0, 0, 0);
+}
+
+async function saveConcretePDF() {
+
+    const { jsPDF } = window.jspdf;
+
+    const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4"
+    });
+
+    const table = document.getElementById("reportTable");
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    drawLightHeader(doc);
+    let y = 24;
+    let setsOnPage = 0;
+
+    for (let i = 1; i < table.rows.length; i++) {
+
+        if (setsOnPage === 3) {
+            doc.addPage();
+            drawLightHeader(doc);
+            y = 24;
+            setsOnPage = 0;
+        }
+
+        const row = table.rows[i];
+        const tableId = row.cells[0].innerText.trim();
+        const dateValue = row.cells[1].innerText.trim();
+        const imgTags = row.cells[2].querySelectorAll("img");
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+
+        doc.text(
+        `Pile ID : ${tableId}  `,
+        15,
+        y
+        );
+        // doc.text(`Date : ${dateValue}`, 80, y); 
+        y += 8;
+
+        let x = 15;
+        const imgW = 32;
+        const imgH = 40;
+
+        for (let img of imgTags) {
+
+            const dataURL = await loadImageAsDataURL(img.src);
+
+            if (x + imgW > pageWidth - 15) {
+                x = 15;
+                y += imgH + 10;
+            }
+
+           doc.addImage(dataURL, "JPEG", x, y, imgW, imgH);
+
+// Convert date format YYYY-MM-DD → DD-MM-YYYY
+let formattedDate = "";
+if (dateValue) {
+    const parts = dateValue.split("-");
+    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+// Date inside image bottom-right
+doc.setFont("helvetica", "bold");
+doc.setFontSize(9);
+doc.setTextColor(0, 0, 0); // black color
+
+doc.text(
+    formattedDate,
+    x + imgW - 2,
+    y + imgH - 2,
+    { align: "right" }
+);
+
+x += imgW + 7;
+        }
+
+        y += imgH + 10;
+        setsOnPage++;
+    }
+
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(10);
+
+// 🔵 Blue Color
+    doc.setTextColor(0, 0, 255);
+
+    doc.text(
+    "INDISOLAR - Software Generated Report",
+    pageWidth / 2,
+    pageHeight - 15,
+    { align: "center" }
+    );
+
+// Optional: Reset color back to black
+    doc.setTextColor(0, 0, 0);
+
+
+    doc.save("ConcreteDocumentation.pdf");
+}
+
+function loadImageAsDataURL(url) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext("2d").drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/jpeg", 0.3));
+        };
+        img.src = url;
+    });
+}
+
+</script>
+
+</body>
+</html>

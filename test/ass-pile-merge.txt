@@ -1,0 +1,472 @@
+UPDATE piles p
+JOIN assessment a
+  ON p.`Area ID` = a.`Area ID`
+ AND p.`Table ID` = a.`Table ID`
+ AND p.`Pile No`  = a.`Pile No`
+JOIN users u
+  ON a.`Contractor` = u.`User ID`
+SET
+    p.`Assessment Date`       = a.`Task Date`,
+    p.`Assessment Contractor` = u.`User Name`,
+    p.`Assessment Case`       = a.`Assessment case`,
+    p.`Assessment Status`     = 'Assessment Done'
+WHERE a.`Assessment Status` = 'OE Approved';
+
+
+
+UPDATE piles p
+JOIN remedy r
+  ON p.`Area ID` = r.`Area ID`
+ AND p.`Table ID` = r.`Table ID`
+ AND p.`Pile No`  = r.`Pile No`
+SET
+    p.`Remedy Date`       = r.`Task Date`,
+    p.`Remedy Status`     = 'Remedy Done',
+    p.`Remedy Contractor` = r.`Remedy Text`
+WHERE r.`Picture Location` IS NOT NULL
+  AND r.`Picture Location` <> '';
+
+
+
+SELECT
+    `Area ID`,
+    `Table ID`,
+    `Pile No`,
+    `Assessment Date`,
+    `Assessment Case`,
+    `Assessment Status`,
+    `Assessment Contractor`,
+    `Remedy Date`,
+    `Remedy Status`,
+    `Remedy Contractor`
+FROM piles
+WHERE `Assessment Status` = 'Assessment Done'
+  AND `Area ID` <> 'A001';
+
+-----------------------------------------------
+for date wise remedy from qc info sql 
+
+UPDATE remedy
+SET 
+    `Task Date` = '2025-10-24',
+    `Assessed Case` = 'Case3',
+    `Picture Location` = CONCAT('C:\\Users\\LENOVO\\Desktop\\RemedyPictures\\', `Remedy ID`)
+WHERE 
+    `Area ID` = 'A004'
+    AND (
+        (`Table ID` = 'C68S45' AND `Pile No` IN (1)) OR
+        (`Table ID` = 'C66S43' AND `Pile No` IN (2,3,4)) OR
+        (`Table ID` = 'C65S43' AND `Pile No` IN (4)) OR
+        (`Table ID` = 'C64S44' AND `Pile No` IN (1,2,3)) OR
+        (`Table ID` = 'C66S44' AND `Pile No` IN (4)) OR
+        (`Table ID` = 'C67S45' AND `Pile No` IN (1,2,3)) OR
+        (`Table ID` = 'C67S44' AND `Pile No` IN (1,2)) OR
+        (`Table ID` = 'C65S44' AND `Pile No` IN (1,2))
+    );
+updted upto slno 20 09/12/25
+
+
+
+UPDATE remedy
+SET
+    `Task Date` = '2026-01-11',
+    `Remedy Text` = 'PARASHURAM',
+    `Picture Location` = CONCAT('C:\\Users\\LENOVO\\Desktop\\RemedyPictures\\', `Remedy ID`)
+WHERE
+(
+    (`Table ID` = 'C91S28' AND `Pile No` IN (3,4)) OR
+    (`Table ID` = 'C92S28' AND `Pile No` IN (1,2,3,4)) OR
+    (`Table ID` = 'C88S25' AND `Pile No` IN (3)) OR
+    (`Table ID` = 'C87S27' AND `Pile No` IN (1,2)) OR
+    (`Table ID` = 'C88S27' AND `Pile No` IN (1,2,3,4)) OR
+    (`Table ID` = 'C89S29' AND `Pile No` IN (1,2,3,4)) OR
+    (`Table ID` = 'C90S29' AND `Pile No` IN (1,2,3,4)) OR
+    (`Table ID` = 'C91S29' AND `Pile No` IN (1,2,3)) OR
+    (`Table ID` = 'C92S29' AND `Pile No` IN (1,2,3)) OR
+    (`Table ID` = 'C96S25' AND `Pile No` IN (2,3)) OR
+    (`Table ID` = 'C99S3' AND `Pile No` IN (1,2,3,4)) OR
+    (`Table ID` = 'C100S4' AND `Pile No` IN (1,2,3,4))
+);
+
+
+SELECT `Task Date`, COUNT(*) AS picture_location_count
+FROM remedy
+WHERE `Remedy Text` = 'PARASHURAM'
+  AND `Picture Location` IS NOT NULL
+  AND `Picture Location` != ''
+GROUP BY `Task Date`
+ORDER BY `Task Date`;
+
+
+
+
+
+async function saverustPDF() {
+
+        let lastSlNo = 0;
+await fetch("/get_last_slno?type=bracingrust")  // use "case" if for case pdf
+    .then(res => res.json())
+    .then(data => {
+        lastSlNo = parseInt(data.last_slno);
+    });
+        
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: [420, 210] // A3 Landscape
+    });
+
+    const currentDate = new Date().toISOString().split("T")[0];
+    const userSelect = document.getElementById("user_id");
+    const userId = userSelect.value;
+    const userName = userSelect.options[userSelect.selectedIndex].text.trim().replace(/\s+/g, "_");
+
+    const table = document.getElementById("reportTable");
+
+    const headers = [
+        { content: "Sl. No.", rowSpan: 2 },
+        { content: "Table ID", rowSpan: 2 },
+        { content: "Pile No", rowSpan: 2 },
+        { content: "Date of Assessment", rowSpan: 2 },
+        { content: "CASE 1", colSpan: 3 },
+        { content: "CASE 2", colSpan: 2 },
+        { content: "CASE 3", colSpan: 3 },
+        { content: "CASE 4", colSpan: 1 },
+        { content: "Assessment Status", rowSpan: 2 },
+        { content: "As per FI", colSpan: 4  },
+        { content: "Remarks", rowSpan: 2 }
+    ];
+
+    const subHeaders = [
+       "Lost Galvanized", "Damages in Bare Steel", "Rusty Areas",
+        "Partially or completely lost galvanized coating", "Rusty Areas", 
+        "Partially lost galvanized coating", "Bare steel unaffected", "Few red spots or rusty areas",
+        "No red spots or rusty",
+        "Case1","Case2","Case3","Case4",
+        "Assessment Status", "Classification as per Indisolar", "Recommendation as per OE", "Remarks"
+    ];
+
+    let pageNum = 1;
+    let setsOnPage = 0;  // Track how many sets printed on current page
+    let slNo = lastSlNo + 1;
+const fromDate = document.getElementById("from_date").value; // YYYY-MM-DD
+
+// let assessmentDate = "";
+// if (fromDate) {
+//     const parts = fromDate.split("-");
+//     // YYYY-MM-DD → DD-MM
+//     assessmentDate = `${parts[2]}-${parts[1]}`;
+// }
+// ---------- DATE (DD-MM-YYYY) ----------
+let assessmentDate = "";
+if (fromDate) {
+    const parts = fromDate.split("-"); // YYYY-MM-DD
+    assessmentDate = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+}
+
+// ---------- AREA NAME ----------
+const areaSelect = document.getElementById("area");
+let areaName = areaSelect.options[areaSelect.selectedIndex].text;
+
+// Handle "All Areas"
+if (areaSelect.value === "all") {
+    areaName = "AllAreas";
+}
+
+// Make filename safe
+areaName = areaName.replace(/\s+/g, "");
+
+
+
+for (let i = 1; i < table.rows.length; i++) {
+        let isFirstSet = setsOnPage === 0;
+        let startY = isFirstSet ? 30 : 115;  // Start position for row data
+        let startX = 10; 
+
+        if (setsOnPage === 0) {
+            addHeader(pageNum++);  // Add header for the first set
+        }
+
+        const row = table.rows[i];
+        const cells = row.cells;
+       
+const rowData = [
+    slNo++,  // Sl. No.
+    cells[1]?.innerText || "",
+
+    // ✅ Cleaned Pile No
+    (() => {
+        const pileCell = cells[2];
+        if (!pileCell) return "";
+        if (pileCell.firstChild && pileCell.firstChild.nodeType === Node.TEXT_NODE) {
+            return pileCell.firstChild.textContent.trim();
+        }
+        const match = pileCell.textContent.trim().match(/^\d+/);
+        return match ? match[0] : "";
+    })(),
+
+    cells[3]?.innerText || "",
+
+    cells[4]?.querySelector(".case1_zinc")?.innerText || "",
+    cells[4]?.querySelector(".case1_bare")?.innerText || "",
+    cells[4]?.querySelector(".case1_rust")?.innerText || "",
+
+    cells[5]?.querySelector(".case2_zinc")?.innerText || "",
+    cells[5]?.querySelector(".case2_bare")?.innerText || "",
+
+    cells[6]?.querySelector(".case3_zinc")?.innerText || "",
+    cells[6]?.querySelector(".case3_bare")?.innerText || "",
+    cells[6]?.querySelector(".case3_rust")?.innerText || "",
+
+    cells[7]?.querySelector(".case4_zinc")?.innerText || "",
+
+    (cells[5]?.innerText.trim() === "OE Approved" ? "Completed" : cells[5]?.innerText.trim()) || "",
+
+   
+    cells[9]?.innerText || "",
+    cells[10]?.innerText || "",
+    cells[11]?.innerText || ""
+];
+
+    const caseCheckboxColumns = [4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const caseCircleColumns = [14, 15, 16, 17];
+
+const tableResult = doc.autoTable({
+    head: [headers, subHeaders],
+    body: [rowData],
+    startY: startY,
+    theme: "grid",
+    styles: {
+        fontSize: 8,
+        cellPadding: 1,
+        overflow: 'linebreak',
+        lineWidth: 0.1,
+        lineColor: [0, 0, 0],
+        halign: 'center',
+        valign: 'middle'
+    },
+    headStyles: {
+        fillColor: [200, 200, 200],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold'
+    },
+    margin: { left: 5, right: 5 },
+
+    /** ✅ Draw light-colored checkbox inside CASE columns */
+    didDrawCell: function (data) {
+    const colIndex = data.column.index;
+
+    if ((caseCheckboxColumns.includes(colIndex) || caseCircleColumns.includes(colIndex)) && data.section === 'body') {
+        const checkboxSize = 4;
+        const x = data.cell.x + data.cell.width / 2 - checkboxSize / 2;
+        const y = data.cell.y + data.cell.height / 2 - checkboxSize / 2;
+
+        doc.setDrawColor(150); // Light gray
+        doc.setLineWidth(0.3);
+
+        if (caseCheckboxColumns.includes(colIndex)) {
+            // Draw square checkbox
+            doc.rect(x, y, checkboxSize, checkboxSize);
+        } else if (caseCircleColumns.includes(colIndex)) {
+            // Just draw circle, no tick
+            const radius = checkboxSize / 2;
+            doc.circle(x + radius, y + radius, radius);
+        }
+    }
+}
+});
+
+    const imgTags = cells[7]?.querySelectorAll("img") || [];
+    const formDataCorrosion = new FormData();
+    const imageY = tableResult.lastAutoTable.finalY + 2; 
+    for (let k = 0; k < 4; k++) {
+        if (imgTags[k]) {
+            try {
+                const blob = await fetch(imgTags[k].src).then(res => res.blob());
+                formDataCorrosion.append(`side${k + 1}`, blob, `side${k + 1}.jpg`);
+            } catch (e) {
+                console.warn(`Error loading image side${k + 1}:`, e);
+            } 
+        }
+    }
+
+       const imageWidth = 33;
+const imageHeight = 57;
+const blockGap = 70;
+let currentX = startX;
+
+
+for (let imgIndex = 0; imgIndex < 16; imgIndex++) {
+    const imgTag = imgTags[imgIndex];
+    if (imgTag && imgTag.src) {
+        try {
+            const dataURL = await loadImageAsDataURL(imgTag.src);
+
+            // Draw image
+            doc.addImage(dataURL, "JPEG", currentX, imageY, imageWidth, imageHeight);
+
+            // Add "Side n" label below image
+            const labelText = `Side ${imgIndex + 1}`;
+            doc.setFontSize(8);
+            doc.text(labelText, currentX + (imageWidth / 2) - 7, imageY + imageHeight + 5);
+
+            currentX += blockGap;
+        } catch (err) {
+            console.warn(`Error loading image ${imgIndex + 1}:`, err);
+        }
+    }
+}
+
+    setsOnPage++;
+const isLastRow = i === table.rows.length - 1;
+if (setsOnPage === 2 && !isLastRow) {
+    setsOnPage = 0;
+    doc.addPage(); // Only add page if not last
+}
+
+}
+
+const pdfPageWidth = 420; // A3 width in mm (landscape)
+const pdfPageHeight = 210; // A3 height in mm (landscape)
+const imageWidth = 180;    // Image width (adjustable)
+const imageHeight = 90;    // Image height (adjustable)
+const centeredX = (pdfPageWidth - imageWidth) / 2; // Centering horizontally
+
+let chartAdded = false;
+
+// Add Status Chart
+const statusChart = document.getElementById("statusChart");
+if (statusChart) {
+    if (!chartAdded) {
+        doc.addPage();
+        addHeader(++pageNum);
+        chartAdded = true;
+    }
+    doc.setFontSize(14);
+    doc.text("Assessment Charts", pdfPageWidth / 2, 30, { align: "center" });
+
+    const chartImage = statusChart.toDataURL("image/png");
+    doc.addImage(chartImage, "PNG", centeredX, 40, imageWidth, imageHeight);
+}
+
+// Add Case Distribution Chart
+const caseChart = document.getElementById("caseChart");
+if (caseChart) {
+    doc.addPage();
+    addHeader(++pageNum);
+    doc.setFontSize(14);
+    doc.text("Assessment Case Distribution", pdfPageWidth / 2, 30, { align: "center" });
+
+    const caseImage = caseChart.toDataURL("image/png");
+    doc.addImage(caseImage, "PNG", centeredX, 40, imageWidth, imageHeight);
+}
+function loadLogoImage(callback) {
+    const img = new Image();
+    img.src = '/static/images/logo.png'; // Adjust extension if it's .jpg or .jpeg
+    img.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const base64 = canvas.toDataURL("image/png");
+        callback(base64);
+    };
+}
+loadLogoImage(function(logoBase64) {
+    generatePDF(logoBase64); // call your PDF generation function with the logo
+});
+
+    // Save to server
+    const pdfBlob = doc.output("blob");
+    const formData = new FormData();
+    
+    // formData.append("pdf", pdfBlob, `Assessment_Report_${currentDate}.pdf`);
+const startSlNo = lastSlNo + 1;
+const endSlNo = slNo - 1;
+const rowCount = table.rows.length - 1;
+
+// formData.append(
+//     "pdf",
+//     pdfBlob,
+//     `Assessment_Report_${userName}_${assessmentDate}_${rowCount}P(${startSlNo}-${endSlNo}).pdf`
+// );
+// ---------- PDF NAME ----------
+formData.append(
+    "pdf",
+    pdfBlob,
+    `Bracingrust_Report(${areaName})_${userName}_${assessmentDate}_${rowCount}P(${startSlNo}-${endSlNo}).pdf`
+);
+    formData.append("new_last_slno", slNo - 1);
+    fetch("/save_rustpdf", {
+        method: "POST",
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => alert(data.message))
+        .catch(error => console.error("Error saving PDF:", error));
+        function addHeader(pageNumber) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const title = "BREPL REMEDIAL PROJECT - Bracingrust Report";
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16); // Set font size before measuring
+    const textWidth = doc.getTextWidth(title); // Now get correct width
+    const centerX = (pageWidth - textWidth) / 2;
+
+    // Draw background rectangle
+    doc.setFillColor(243, 165, 165); // Light blue
+    doc.rect(0, 5, pageWidth, 15, "F");
+
+    // Add title
+    doc.setTextColor(0, 0, 0);
+    doc.text(title, centerX, 15);
+
+    // Add report date and page number
+    doc.setFontSize(12);
+    doc.text(`Report Date: ${currentDate}`, 10, 25);
+    doc.text(`Page ${pageNumber}`, pageWidth - 25, 25);
+}
+
+
+function loadImageAsDataURL(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+
+            // 🔹 Keep same width/height but reduce file MB by lowering JPEG quality
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.4); 
+            // 0.5 = 50% quality (adjust 0.4–0.7 range for balance)
+
+            resolve(compressedDataUrl);
+        };
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+}
+    function loadImageAsDataURL(url) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL("image/jpeg"));
+            };
+            img.onerror = reject;
+            img.src = url;
+        });
+    }
+
